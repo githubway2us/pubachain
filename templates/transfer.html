@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>โอนเหรียญ</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        h1, h2 {
+            text-align: center;
+            color: #444;
+        }
+        #login-section, #transfer-section {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin: 20px auto;
+            padding: 20px;
+            max-width: 400px;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+        input[type="text"], input[type="password"], input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+        button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #message {
+            margin-top: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+        #transfer-history {
+            margin-top: 20px;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        #transfer-history div {
+            margin: 5px 0;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        #wallet-info {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            max-width: 400px;
+            margin: 0 auto;
+            margin-top: 20px;
+        }
+        .status-success {
+            color: green;
+        }
+        .status-failure {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>โอนเหรียญ</h1>
+
+    <div id="wallet-info">
+        <h3>รายละเอียดกระเป๋า</h3>
+        <p>ชื่อกระเป๋า: <span id="wallet-name-value">ชื่อกระเป๋า</span></p>
+        <p>ที่อยู่กระเป๋า: <span id="wallet-address-value">แสดงที่อยู่กระเป๋า</span></p>
+        <p>ยอดเงิน: <span id="wallet-balance-value">จำนวนเหรียญ</span> เหรียญ</p>
+    </div>
+
+    <div id="login-section">
+        <h2>ล็อกอินเข้ากระเป๋า</h2>
+        <form id="login-form">
+            <label for="wallet_id">ID กระเป๋า:</label>
+            <input type="text" id="wallet_id" required>
+            
+            <label for="password">รหัสผ่าน:</label>
+            <input type="password" id="password" required>
+            
+            <button type="submit">ล็อกอิน</button>
+        </form>
+    </div>
+
+    <div id="transfer-section" style="display: none;">
+        <form id="transfer-form">
+            <label for="recipient_wallet_id">ID กระเป๋าผู้รับ:</label>
+            <input type="text" id="recipient_wallet_id" required>
+            
+            <label for="amount">จำนวนเหรียญ:</label>
+            <input type="number" id="amount" required min="1">
+
+            <button type="submit">โอนเหรียญ</button>
+        </form>
+
+        <div id="message"></div>
+    </div>
+
+    <h2>รายการโอนเหรียญ</h2>
+    <div id="transfer-history"></div>
+
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const walletId = document.getElementById('wallet_id').value;
+            const password = document.getElementById('password').value;
+    
+            const response = await fetch('/wallet/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    wallet_id: walletId,
+                    password: password
+                })
+            });
+    
+            const result = await response.json();
+            if (result.success) {
+                // แสดงรายละเอียดกระเป๋า
+                document.getElementById('wallet-name-value').innerText = result.wallet_name;
+                document.getElementById('wallet-address-value').innerText = result.wallet_address;
+                document.getElementById('wallet-balance-value').innerText = result.wallet_balance;
+    
+                document.getElementById('login-section').style.display = 'none';
+                document.getElementById('transfer-section').style.display = 'block';
+                loadTransferHistory(walletId); // ส่ง walletId ไปยังฟังก์ชัน
+            } else {
+                alert(result.message);
+            }
+        });
+    
+        document.getElementById('transfer-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const recipientWalletId = document.getElementById('recipient_wallet_id').value;
+            const amount = document.getElementById('amount').value;
+    
+            const response = await fetch('/wallet/transfer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    recipient_wallet_id: recipientWalletId,
+                    amount: parseFloat(amount)
+                })
+            });
+    
+            const result = await response.json();
+    
+            // แสดงสถานะการโอน
+            const messageElement = document.getElementById('message');
+            if (result.success) {
+                messageElement.className = 'status-success';
+                messageElement.innerText = 'โอนเหรียญสำเร็จ!';
+                loadTransferHistory(walletId); // ส่ง walletId ไปยังฟังก์ชัน
+                // อัปเดตยอดเงินในกระเป๋าหลังจากโอนสำเร็จ
+                document.getElementById('wallet-balance-value').innerText = result.new_balance;
+            } else {
+                messageElement.className = 'status-failure';
+                messageElement.innerText = `การโอนล้มเหลว: ${result.message}`;
+            }
+        });
+    
+        async function loadTransferHistory(walletId) {
+            try {
+                const response = await fetch(`http://127.0.0.1:5000/wallet/transfer/history?wallet_id=${walletId}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const history = await response.json();
+                const transferHistoryDiv = document.getElementById('transfer-history');
+                transferHistoryDiv.innerHTML = ''; // เคลียร์ข้อมูลเก่า
+    
+                if (Array.isArray(history)) {
+                    history.forEach(transfer => {
+                        // แสดงผลประวัติการโอน
+                        const transferDiv = document.createElement('div');
+                        transferDiv.innerText = `ID: ${transfer.id}, From: ${transfer.from}, To: ${transfer.to}, Amount: ${transfer.amount}, Date: ${transfer.date}`;
+                        transferHistoryDiv.appendChild(transferDiv);
+                    });
+                } else {
+                    console.error('Unexpected response format', history);
+                }
+            } catch (error) {
+                console.error('Error loading transfer history:', error);
+            }
+        }
+    </script>
+    
+</body>
+</html>

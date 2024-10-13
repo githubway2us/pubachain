@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pubachain</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* สไตล์ที่คุณมีอยู่แล้ว */
+    </style>
+   <script src="{{ url_for('static', filename='script.js') }}" defer></script>
+
+
+</script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Pubachain</h1>
+            <div id="wallet-status">
+                <!-- สถานะกระเป๋าจะถูกแสดงที่นี่ -->
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="/">หน้าแรก</a></li>
+                    <li><a href="/wallet.html">สร้างกระเป๋า</a></li>
+                    <li><a href="/transactions.html">ดูธุรกรรม</a></li>
+                    <li><a href="/game.html">ตรวจสอบบล็อกเชน</a></li>
+                    <li><a href="/wallet/transfer.html">โอนเหรียญ</a></li>
+                </ul>
+            </nav>
+        </header>
+        <main>
+            <h2>เกี่ยวกับ Pubachain</h2>
+            <p>Pubachain เป็นบล็อกเชนที่รองรับการขุดเหรียญ โดยมีระบบกระเป๋าและการทำธุรกรรมที่ปลอดภัย ผู้เล่นสามารถทำภารกิจในเกมเพื่อขุดเหรียญและรับรางวัลจากการเล่นเกม!</p>
+            <div class="login-form" id="login-form">
+                <h3>เข้าสู่ระบบกระเป๋า (อักษรเล็ก-ใหญ่ มีผลต่อกระเป๋า)</h3>
+                <input type="text" id="wallet-id" placeholder="ID กระเป๋า" required>
+                <input type="password" id="wallet-password" placeholder="รหัสผ่าน" required>
+                <button onclick="loginWallet()">เข้าสู่ระบบ</button>
+                <div id="login-message" class="message"></div>
+            </div>
+            <div id="mining-section" style="display: none;">
+                <h3>ขุดเหรียญ</h3>
+                <button onclick="startMining()">เริ่มขุดเหรียญ</button>
+                <div id="mining-console">สถานะการขุดเหรียญจะปรากฏที่นี่...</div>
+            </div>
+        </main>
+        <footer>
+            <p>&copy; 2024 Pubachain. สงวนลิขสิทธิ์.</p>
+        </footer>
+    </div>
+
+    <script>
+        let loggedInWalletId = null; // เก็บ ID ของกระเป๋าที่ล็อกอิน
+    
+        function checkLoginStatus() {
+            fetch('/wallet/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        loggedInWalletId = data.wallet_id; 
+                        document.getElementById('wallet-status').innerHTML = `<p>${data.wallet_id} - ${data.balance} Coins</p>`;
+                        document.getElementById('mining-section').style.display = 'block';
+                    } else {
+                        document.getElementById('wallet-status').innerHTML = `<p>ไม่ได้เข้าสู่ระบบ</p>`;
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('wallet-status').innerHTML = `<p>เกิดข้อผิดพลาด: ${error.message}</p>`;
+                });
+        }
+
+        function loginWallet() {
+            const walletId = document.getElementById('wallet-id').value;
+            const walletPassword = document.getElementById('wallet-password').value;
+    
+            fetch('/wallet/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ wallet_id: walletId, password: walletPassword })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loggedInWalletId = data.wallet_id; 
+                    document.getElementById('wallet-status').innerHTML = `<p>${data.wallet_id} - ${data.balance} Coins</p>`;
+                    document.getElementById('login-form').style.display = 'none'; 
+                    document.getElementById('mining-section').style.display = 'block'; 
+                } else {
+                    document.getElementById('login-message').innerText = 'เข้าสู่ระบบล้มเหลว: ' + data.message;
+                }
+            })
+            .catch(error => {
+                document.getElementById('login-message').innerText = 'เกิดข้อผิดพลาด: ' + error.message;
+            });
+        }
+    
+        function startMining() {
+            if (!loggedInWalletId) {
+                document.getElementById('mining-console').innerText += '\nโปรดล็อกอินก่อนทำการขุดเหรียญ';
+                return;
+            }
+
+            document.getElementById('mining-console').innerText += '\nเริ่มการขุดเหรียญ...';
+            fetch('/mine/start', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ wallet_id: loggedInWalletId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('mining-console').innerText += '\n' + data.message; // แสดงข้อความสถานะการขุด
+
+                    if (Array.isArray(data.transactions)) {
+                        logTransactionDetails(data.transactions); // แสดงรายละเอียดการทำธุรกรรม
+                    } else {
+                        document.getElementById('mining-console').innerText += '\nไม่มีธุรกรรมที่บันทึกไว้';
+                    }
+                } else {
+                    document.getElementById('mining-console').innerText += '\nเกิดข้อผิดพลาดในการขุด: ' + data.message;
+                }
+            })
+            .catch(error => {
+                document.getElementById('mining-console').innerText += '\nเกิดข้อผิดพลาด: ' + error.message;
+            });
+        }
+
+        function logTransactionDetails(transactions) {
+            transactions.forEach(tx => {
+                document.getElementById('mining-console').innerText += `\nธุรกรรม ID: ${tx.id}, จำนวน: ${tx.amount} Coins, เวลา: ${tx.timestamp}`;
+            });
+        }
+
+        window.onload = checkLoginStatus;
+    </script>
+</body>
+</html>

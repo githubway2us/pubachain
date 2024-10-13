@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เช็คยอดเหรียญในกระเป๋า</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="script.js" defer></script> <!-- ลิงค์ไปยัง JavaScript -->
+    
+</head>
+<body>
+    <h1>เช็คยอดเหรียญในกระเป๋า</h1>
+    <input type="text" id="wallet_id" placeholder="กรุณาใส่ที่อยู่กระเป๋า" />
+    <button id="check_balance">ตรวจสอบยอดเหรียญ</button>
+    <h2>ยอดเหรียญ: <span id="balance">0</span></h2>
+
+    <script>
+        $(document).ready(function() {
+            $('#check_balance').click(function() {
+                const walletId = $('#wallet_id').val();
+                $.getJSON(`/wallet/balance/${walletId}`, function(data) {
+                    if (data.success) {
+                        $('#balance').text(data.balance);
+                    } else {
+                        alert(data.message);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

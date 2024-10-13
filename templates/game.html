@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ดูบล็อกทั้งหมด</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f4f6f9;
+        }
+        h1 {
+            text-align: center;
+            margin-top: 20px;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        .table-container {
+            margin: 20px auto;
+            width: 90%;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        th {
+            background-color: #343a40;
+            color: white;
+        }
+        td, th {
+            text-align: center;
+        }
+        .pagination {
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>บล็อกล่าสุด</h1>
+    <div class="table-container">
+        <div id="latest-block">
+            <!-- ข้อมูลบล็อกล่าสุดจะถูกแสดงที่นี่ -->
+        </div>
+    </div>
+
+    <h1>บล็อกทั้งหมด <br> </h1>
+    <center><a href="/">หน้าแรก</a> </center>
+
+    <div class="table-container">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>หมายเลขบล็อก</th>
+                    <th>เวลาที่ขุด</th>
+                    <th>Nonce</th>
+                    <th>Hash ก่อนหน้า</th>
+                    <th>ธุรกรรม</th>
+                </tr>
+            </thead>
+            <tbody id="block-list">
+                <!-- แถวของบล็อกจะถูกแทรกที่นี่ -->
+            </tbody>
+        </table>
+        <nav>
+            <ul class="pagination">
+                <!-- ปุ่ม pagination จะถูกแทรกที่นี่ -->
+            </ul>
+        </nav>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        const blocksPerPage = 20;
+
+        // ฟังก์ชันสำหรับดึงบล็อกทั้งหมด
+        function loadBlocks(page = 1) {
+            fetch('/blocks')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const totalBlocks = data.blocks.length;
+                        const blockList = document.getElementById('block-list');
+                        blockList.innerHTML = ''; // ล้างข้อมูลเก่าก่อน
+
+                        const start = (page - 1) * blocksPerPage;
+                        const end = start + blocksPerPage;
+                        const blocksToShow = data.blocks.slice(start, end);
+
+                        blocksToShow.forEach(block => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${block.index}</td>
+                                <td>${new Date(block.timestamp * 1000).toLocaleString()}</td>
+                                <td>${block.nonce}</td>
+                                <td>${block.previous_hash}</td>
+                                <td>${JSON.stringify(block.transactions)}</td>
+                            `;
+                            blockList.appendChild(row);
+                        });
+
+                        // สร้าง pagination
+                        createPagination(totalBlocks, page);
+                    } else {
+                        alert('เกิดข้อผิดพลาดในการโหลดบล็อก');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        // ฟังก์ชันสำหรับดึงบล็อกล่าสุด
+        function loadLatestBlock() {
+            fetch('/blocks/latest')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const latestBlockDiv = document.getElementById('latest-block');
+                        latestBlockDiv.innerHTML = `
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">บล็อกที่ ${data.block.index}</h5>
+                                    <p class="card-text"><strong>เวลาที่ขุด:</strong> ${new Date(data.block.timestamp * 1000).toLocaleString()}</p>
+                                    <p class="card-text"><strong>Nonce:</strong> ${data.block.nonce}</p>
+                                    <p class="card-text"><strong>Hash ก่อนหน้า:</strong> ${data.block.previous_hash}</p>
+                                    <p class="card-text"><strong>ธุรกรรม:</strong> ${JSON.stringify(data.block.transactions)}</p>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        alert('เกิดข้อผิดพลาดในการโหลดบล็อกล่าสุด');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        // สร้าง pagination
+        function createPagination(totalBlocks, currentPage) {
+            const totalPages = Math.ceil(totalBlocks / blocksPerPage);
+            const pagination = document.querySelector('.pagination');
+            pagination.innerHTML = '';
+
+            for (let page = 1; page <= totalPages; page++) {
+                const pageItem = document.createElement('li');
+                pageItem.className = 'page-item ' + (page === currentPage ? 'active' : '');
+                pageItem.innerHTML = `<a class="page-link" href="#">${page}</a>`;
+                pageItem.addEventListener('click', () => loadBlocks(page));
+                pagination.appendChild(pageItem);
+            }
+        }
+
+        // โหลดบล็อกทั้งหมดและบล็อกล่าสุดเมื่อโหลดหน้า
+        window.onload = function() {
+            loadLatestBlock();
+            loadBlocks();
+        };
+    </script>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

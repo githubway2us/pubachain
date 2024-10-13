@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ส่งเหรียญ</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(to right, #0a74da, #00bcd4);
+            color: #fff;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        header {
+            text-align: center;
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            margin: 0;
+        }
+
+        nav {
+            margin: 20px 0;
+        }
+
+        nav ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        nav ul li {
+            display: inline;
+            margin: 0 10px;
+        }
+
+        nav ul li a {
+            color: #00bcd4;
+            text-decoration: none;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        nav ul li a:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        main {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        form {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+            background-color: rgba(255, 255, 255, 0.3);
+            color: #fff;
+            font-size: 16px;
+        }
+
+        input::placeholder {
+            color: #fff;
+        }
+
+        button {
+            background-color: #00bcd4;
+            color: #fff;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background-color 0.3s;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: #0097a7;
+        }
+
+        #send-status {
+            margin-top: 20px;
+        }
+    </style>
+        <script src="script.js" defer></script> <!-- ลิงค์ไปยัง JavaScript -->
+        
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ส่งเหรียญ</h1>
+            <div id="wallet-status">
+                <!-- สถานะกระเป๋าจะถูกแสดงที่นี่ -->
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="/">หน้าแรก</a></li>
+                    <li><a href="/wallet.html">สร้างกระเป๋า</a></li>
+                    <li><a href="/transactions.html">ดูธุรกรรม</a></li>
+                    <li><a href="/mine_coins.html">หน้าขุดเหรียญ</a></li>
+                </ul>
+            </nav>
+        </header>
+        <main>
+            <form id="send-coins-form">
+                <input type="text" id="recipient-wallet-id" placeholder="ID กระเป๋าผู้รับ" required>
+                <input type="number" id="amount" placeholder="จำนวนเหรียญ" required>
+                <p id="available-balance"></p>
+                <button type="submit">ส่งเหรียญ</button>
+            </form>
+            <div id="send-status"></div>
+        </main>
+    </div>
+
+    <script>
+        function fetchWalletStatus() {
+            fetch('/wallet/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('wallet-status').innerHTML = `<p>${data.wallet_id} - ${data.balance} Coins</p>`;
+                        document.getElementById('available-balance').innerHTML = `ยอดเงินที่สามารถส่งได้: ${data.balance} Coins`;
+                    } else {
+                        document.getElementById('wallet-status').innerHTML = `<p>ไม่ได้เข้าสู่ระบบ</p>`;
+                    }
+                });
+        }
+
+        document.getElementById('send-coins-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const recipientId = document.getElementById('recipient-wallet-id').value;
+            const amount = document.getElementById('amount').value;
+
+            // ตรวจสอบจำนวนเหรียญที่สามารถส่งได้
+            const availableBalance = parseFloat(document.getElementById('available-balance').innerText.split(': ')[1]);
+
+            if (!recipientId || !amount) {
+                alert("กรุณากรอก ID กระเป๋าผู้รับและจำนวนเหรียญ");
+                return;
+            }
+
+            if (amount > availableBalance) {
+                alert("จำนวนเหรียญที่ต้องการส่งมากกว่ายอดเงินที่มีอยู่");
+                return;
+            }
+
+            fetch('/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ recipient_id: recipientId, amount: amount })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('send-status').innerHTML = `<p>${data.message}</p>`;
+                fetchWalletStatus(); // เรียกใช้เพื่ออัปเดตสถานะ
+            })
+            .catch(error => {
+                document.getElementById('send-status').innerHTML = `<p>เกิดข้อผิดพลาด: ${error.message}</p>`;
+            });
+        });
+
+        // เรียกใช้ฟังก์ชันเมื่อโหลดหน้า
+        window.onload = fetchWalletStatus;
+    </script>
+</body>
+</html>

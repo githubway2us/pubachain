@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ขุดเหรียญ</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 20px;
+        }
+        input[type="text"], input[type="password"] {
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #game-container {
+            text-align: center;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #333;
+        }
+    </style>
+        <script src="script.js" defer></script> <!-- ลิงค์ไปยัง JavaScript -->
+        
+</head>
+<body>
+    <div class="container">
+        <h1>ขุดเหรียญ</h1>
+        <form id="mining-form">
+            <input type="text" id="wallet-id" placeholder="ID กระเป๋า" required>
+            <input type="password" id="password" placeholder="รหัสผ่าน" required>
+            <button type="submit">เข้าสู่ระบบเพื่อขุด</button>
+        </form>
+
+        <div id="game-container" style="display: none;">
+            <h2>เกมยิงเพื่อขุดเหรียญ</h2>
+            <p>คุณมีเครดิตเริ่มต้น: <span id="credits">100</span></p>
+            <button id="shoot-button">ยิง</button>
+            <div id="result"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('mining-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const walletId = document.getElementById('wallet-id').value;
+            const password = document.getElementById('password').value;
+
+            fetch('/wallet/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ wallet_id: walletId, password: password })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('game-container').style.display = 'block';
+                    document.getElementById('credits').innerText = data.credits;
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                alert('เกิดข้อผิดพลาดในการเข้าสู่ระบบ: ' + error.message);
+            });
+        });
+
+        document.getElementById('shoot-button').addEventListener('click', function() {
+            fetch('/mine/shoot', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ wallet_id: document.getElementById('wallet-id').value })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('result').innerHTML = `<p>คุณขุดเหรียญได้: <strong>${data.minedCoins}</strong> เหรียญ</p>`;
+                    document.getElementById('credits').innerText = data.newCredits;
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                alert('เกิดข้อผิดพลาดในการขุด: ' + error.message);
+            });
+        });
+    </script>
+</body>
+</html>
